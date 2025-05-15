@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, FileText, FileUp, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -6,28 +6,62 @@ import { mockPolicies, mockUsers } from '../data/mockData';
 import { formatDate, isExpiringSoon } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { Policy, PolicyStatus } from '../types';
+import { getToken, ALWAYS_USE_BACKEND } from '../services/service';
+import { getPolicyCounts, getUsers, getPolicies, getDashboardStats } from '../services/adminService';
+import { toast } from 'sonner';
 
 export const Dashboard: React.FC = () => {
   const { currentAdmin, isSuperAdmin } = useAuth();
-  
-  // Count stats based on mock data
-  const totalUsers = mockUsers.length;
-  const totalPolicies = mockPolicies.length;
-  const expiredPolicies = mockPolicies.filter(
-    (policy) => policy.status === PolicyStatus.EXPIRED
-  ).length;
-  
-  // Find policies that are expiring soon (within 30 days)
-  const expiringSoonPolicies = mockPolicies.filter(
-    (policy) => policy.status === PolicyStatus.ACTIVE && isExpiringSoon(policy.coverEnd, 30)
-  );
-  
-  // Calculate missing documents (policies that don't have all required document types)
-  const requiredDocuments = ['Certificate of insurance', 'Policy schedule', 'Statement of fact'];
-  const policiesWithMissingDocs = mockPolicies.filter(policy => {
-    const documentNames = policy.documents.map(doc => doc.name);
-    return !requiredDocuments.every(docName => documentNames.includes(docName));
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalPolicies: 0,
+    expiredPolicies: 0,
+    totalDocuments: 0
   });
+  
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        if (ALWAYS_USE_BACKEND) {
+          const token = getToken();
+          if (!token) {
+            toast.error('Authentication required');
+            return;
+          }
+          
+          // Get all dashboard stats in one call
+          const dashboardStats = await getDashboardStats(token);
+          
+          // Get policy counts for expired policies count
+          const policyCounts = await getPolicyCounts(token);
+          
+          setStats({
+            totalUsers: dashboardStats.userCount,
+            totalPolicies: dashboardStats.policyCount,
+            expiredPolicies: policyCounts.expiredCount,
+            totalDocuments: dashboardStats.documentCount
+          });
+        } else {
+          // Use mock data in development
+          setStats({
+            totalUsers: mockUsers.length,
+            totalPolicies: mockPolicies.length,
+            expiredPolicies: mockPolicies.filter(policy => policy.status === PolicyStatus.EXPIRED).length,
+            totalDocuments: mockPolicies.reduce((sum, policy) => sum + policy.documents.length, 0)
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -38,78 +72,42 @@ export const Dashboard: React.FC = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard
-          title="Total Users"
-          value={totalUsers}
-          description="Active user accounts"
-          icon={<Users className="h-5 w-5" />}
-          iconColor="bg-blue-100 text-blue-600"
-        />
-        <DashboardCard
-          title="Total Policies"
-          value={totalPolicies}
-          description="Insurance policies"
-          icon={<FileText className="h-5 w-5" />}
-          iconColor="bg-green-100 text-green-600"
-        />
-        <DashboardCard
-          title="Documents"
-          value={mockPolicies.reduce((sum, policy) => sum + policy.documents.length, 0)}
-          description="Uploaded documents"
-          icon={<FileUp className="h-5 w-5" />}
-          iconColor="bg-purple-100 text-purple-600"
-        />
-        <DashboardCard
-          title="Expired Policies"
-          value={expiredPolicies}
-          description="Policies that have expired"
-          icon={<AlertTriangle className="h-5 w-5" />}
-          iconColor="bg-red-100 text-red-600"
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span>Policies Expiring Soon</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {expiringSoonPolicies.length > 0 ? (
-              <div className="space-y-4">
-                {expiringSoonPolicies.map((policy) => (
-                  <ExpiringPolicyRow key={policy.id} policy={policy} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 py-2">No policies expiring soon.</p>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span>Missing Documents</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {policiesWithMissingDocs.length > 0 ? (
-              <div className="space-y-4">
-                {policiesWithMissingDocs.map((policy) => (
-                  <MissingDocumentsRow key={policy.id} policy={policy} requiredDocs={requiredDocuments} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 py-2">No policies with missing documents.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <DashboardCard
+            title="Total Users"
+            value={stats.totalUsers}
+            description="Active user accounts"
+            icon={<Users className="h-5 w-5" />}
+            iconColor="bg-blue-100 text-blue-600"
+          />
+          <DashboardCard
+            title="Total Policies"
+            value={stats.totalPolicies}
+            description="Insurance policies"
+            icon={<FileText className="h-5 w-5" />}
+            iconColor="bg-green-100 text-green-600"
+          />
+          <DashboardCard
+            title="Expired Policies"
+            value={stats.expiredPolicies}
+            description="Policies ended"
+            icon={<AlertTriangle className="h-5 w-5" />}
+            iconColor="bg-red-100 text-red-600"
+          />
+          <DashboardCard
+            title="Documents"
+            value={stats.totalDocuments}
+            description="Uploaded documents"
+            icon={<FileUp className="h-5 w-5" />}
+            iconColor="bg-purple-100 text-purple-600"
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -147,74 +145,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   );
 };
 
-interface ExpiringPolicyRowProps {
-  policy: Policy;
-}
 
-const ExpiringPolicyRow: React.FC<ExpiringPolicyRowProps> = ({ policy }) => {
-  const user = mockUsers.find(user => 
-    user.insurances.some(insurance => insurance.policies.some(p => p.id === policy.id))
-  );
-  
-  const insurance = user?.insurances.find(insurance => 
-    insurance.policies.some(p => p.id === policy.id)
-  );
-  
-  const daysRemaining = Math.ceil(
-    (new Date(policy.coverEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="font-medium">{policy.policyHolder}</p>
-        <p className="text-sm text-gray-500">
-          {policy.vehicle} - {insurance?.insurerName}
-        </p>
-      </div>
-      <div className="text-right">
-        <Badge variant={daysRemaining <= 7 ? "error" : "warning"}>
-          {daysRemaining} days remaining
-        </Badge>
-        <p className="text-xs text-gray-500 mt-1">Expires: {formatDate(policy.coverEnd)}</p>
-      </div>
-    </div>
-  );
-};
 
-interface MissingDocumentsRowProps {
-  policy: Policy;
-  requiredDocs: string[];
-}
 
-const MissingDocumentsRow: React.FC<MissingDocumentsRowProps> = ({ policy, requiredDocs }) => {
-  const user = mockUsers.find(user => 
-    user.insurances.some(insurance => insurance.policies.some(p => p.id === policy.id))
-  );
-  
-  const insurance = user?.insurances.find(insurance => 
-    insurance.policies.some(p => p.id === policy.id)
-  );
-  
-  const documentNames = policy.documents.map(doc => doc.name);
-  const missingDocs = requiredDocs.filter(docName => !documentNames.includes(docName));
-  
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="font-medium">{policy.policyHolder}</p>
-        <p className="text-sm text-gray-500">
-          {policy.vehicle} - {insurance?.insurerName}
-        </p>
-      </div>
-      <div className="text-right">
-        <Badge variant="error">
-          {missingDocs.length} missing
-        </Badge>
-        <p className="text-xs text-gray-500 mt-1">
-          Missing: {missingDocs.join(', ')}
-        </p>
-      </div>
-    </div>
-  );
-};

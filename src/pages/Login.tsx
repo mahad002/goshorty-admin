@@ -57,7 +57,7 @@ export const Login: React.FC = () => {
             <ShieldCheck className="h-12 w-12 text-primary" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Insurance Admin Panel
+         Admin Panel
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Sign in to your account
@@ -110,27 +110,7 @@ export const Login: React.FC = () => {
             </Button>
           </div>
           
-          <div className="flex flex-col space-y-2">
-            <p className="text-sm text-center text-gray-600">Demo Accounts:</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => useDemoCredentials('admin')}
-              >
-                Use Admin Demo
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => useDemoCredentials('super_admin')}
-              >
-                Use Super Admin Demo
-              </Button>
-            </div>
-          </div>
+        
         </form>
       </div>
     </div>

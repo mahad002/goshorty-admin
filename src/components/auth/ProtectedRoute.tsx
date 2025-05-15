@@ -1,10 +1,20 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isSuperAdmin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // On first load or login, redirect based on role
+    if (isAuthenticated && location.pathname === '/') {
+      if (isSuperAdmin) {
+        navigate('/admin-management');
+      }
+    }
+  }, [isAuthenticated, isSuperAdmin, location.pathname, navigate]);
 
   if (isLoading) {
     return (

@@ -1,23 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, PlusCircle, MoreVertical, Search, FilterX } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { mockPolicies, mockUsers } from '../data/mockData';
 import { formatDate, getStatusColor, isExpiringSoon } from '../lib/utils';
-import { PolicyStatus, Insurance } from '../types';
+import { PolicyStatus } from '../types';
 import { toast } from 'sonner';
-import { useAuth } from '../contexts/AuthContext';
+import { getToken, ALWAYS_USE_BACKEND } from '../services/service';
+import { getPolicies, getUsers, createPolicy as createPolicyApi } from '../services/adminService';
+
+interface BackendPolicy {
+  _id: string;
+  policyNumber: string;
+  user: string | BackendUser;
+  vehicle: string;
+  registration: string;
+  coverStart: string;
+  coverEnd: string;
+  status: string;
+  policyHolder: string;
+  additionalDriver: string;
+  insurerName: string;
+  insurerClaimsLine: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface BackendUser {
+  _id: string;
+  email: string;
+  name: string;
+  surname: string;
+  dateOfBirth: string;
+  postcode: string;
+}
+
+interface DocumentData {
+  name: string;
+  issued: string;
+  status: string;
+}
 
 export const Policies: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PolicyStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Live' | 'Expired'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { createPolicy, currentAdmin, isSuperAdmin } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [policies, setPolicies] = useState<BackendPolicy[]>([]);
+  const [users, setUsers] = useState<BackendUser[]>([]);
   const [formData, setFormData] = useState({
     userId: '',
-    insuranceType: '',
     insurerName: '',
     insurerClaimsLine: '',
     policyNumber: '',
@@ -29,6 +63,83 @@ export const Policies: React.FC = () => {
     coverEnd: '',
   });
 
+  // Fetch policies and users from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        if (ALWAYS_USE_BACKEND) {
+          const token = getToken();
+          if (!token) {
+            toast.error('Authentication required');
+            return;
+          }
+          
+          // Fetch policies
+          const policiesData = await getPolicies(token);
+          setPolicies(policiesData);
+          
+          // Fetch users for the dropdown in create policy form
+          const usersData = await getUsers(token);
+          setUsers(usersData);
+        } else {
+          // Use mock data in development
+          const mockPoliciesData = mockPolicies.map(policy => {
+            const user = mockUsers.find(user => 
+              user.insurances.some(insurance => 
+                insurance.policies.some(p => p.id === policy.id)
+              )
+            );
+            
+            const insurance = user?.insurances.find(insurance => 
+              insurance.policies.some(p => p.id === policy.id)
+            );
+            
+            return {
+              _id: policy.id,
+              policyNumber: policy.policyNumber || '',
+              user: {
+                _id: user?.id || '',
+                email: user?.email || '',
+                name: user?.name.split(' ')[0] || '',
+                surname: user?.name.split(' ')[1] || '',
+                dateOfBirth: '1990-01-01',
+                postcode: '',
+              },
+              vehicle: policy.vehicle || '',
+              registration: policy.registration || '',
+              coverStart: policy.coverStart.toISOString(),
+              coverEnd: policy.coverEnd.toISOString(),
+              status: policy.status === PolicyStatus.ACTIVE ? 'Live' : 'Expired',
+              policyHolder: policy.policyHolder,
+              additionalDriver: policy.additionalDriver || 'None',
+              insurerName: insurance?.insurerName || 'Unknown',
+              insurerClaimsLine: '0800 123 4567',
+            };
+          });
+          
+          setPolicies(mockPoliciesData);
+          
+          setUsers(mockUsers.map(user => ({
+            _id: user.id,
+            email: user.email,
+            name: user.name.split(' ')[0],
+            surname: user.name.split(' ')[1] || '',
+            dateOfBirth: '1990-01-01',
+            postcode: user.address?.split(',').pop()?.trim() || '',
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast.error('Failed to load policies');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,8 +149,8 @@ export const Policies: React.FC = () => {
       return;
     }
     
-    if (!formData.insuranceType || !formData.insurerName) {
-      toast.error('Please enter insurance details');
+    if (!formData.insurerName) {
+      toast.error('Please enter insurer name');
       return;
     }
     
@@ -61,30 +172,33 @@ export const Policies: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const success = await createPolicy({
-        userId: formData.userId,
-        insurance: {
-          type: formData.insuranceType,
-          insurerName: formData.insurerName,
-          insurerClaimsLine: formData.insurerClaimsLine,
-        },
-        policy: {
+      if (ALWAYS_USE_BACKEND) {
+        const token = getToken();
+        if (!token) {
+          toast.error('Authentication required');
+          return;
+        }
+        
+        // Format data for backend
+        const policyData = {
           policyNumber: formData.policyNumber,
+          user: formData.userId,
           vehicle: formData.vehicle,
           registration: formData.registration,
+          coverStart: formData.coverStart,
+          coverEnd: formData.coverEnd,
+          status: 'Live', // New policies start as live
           policyHolder: formData.policyHolder,
-          additionalDriver: formData.additionalDriver,
-          coverStart: new Date(formData.coverStart),
-          coverEnd: new Date(formData.coverEnd),
-          status: PolicyStatus.ACTIVE,
-        }
-      });
-      
-      if (success) {
-        setIsCreateModalOpen(false);
+          additionalDriver: formData.additionalDriver || 'None',
+          insurerName: formData.insurerName,
+          insurerClaimsLine: formData.insurerClaimsLine || '0800 123 4567',
+        };
+        
+        await createPolicyApi(policyData, token);
+        
+        // Reset form and close modal
         setFormData({
           userId: '',
-          insuranceType: '',
           insurerName: '',
           insurerClaimsLine: '',
           policyNumber: '',
@@ -95,6 +209,20 @@ export const Policies: React.FC = () => {
           coverStart: '',
           coverEnd: '',
         });
+        
+        setIsCreateModalOpen(false);
+        
+        // Refresh policies
+        const policiesData = await getPolicies(token);
+        setPolicies(policiesData);
+        
+        toast.success('Policy created successfully');
+      } else {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast.success('Policy created successfully (mock)');
+        setIsCreateModalOpen(false);
       }
     } catch (error) {
       console.error('Error creating policy:', error);
@@ -104,23 +232,8 @@ export const Policies: React.FC = () => {
     }
   };
 
-  // Get accessible users for the dropdown
-  const accessibleUsers = mockUsers.filter(user => 
-    isSuperAdmin || user.adminId === currentAdmin?.id || user.createdBy === currentAdmin?.id
-  );
-
-  // Get accessible policies based on user access
-  const accessiblePolicies = mockPolicies.filter(policy => {
-    const user = mockUsers.find(user => 
-      user.insurances.some(insurance => 
-        insurance.policies.some(p => p.id === policy.id)
-      )
-    );
-    return isSuperAdmin || user?.adminId === currentAdmin?.id || user?.createdBy === currentAdmin?.id;
-  });
-
   // Filter policies based on search term and status
-  const filteredPolicies = accessiblePolicies.filter(policy => {
+  const filteredPolicies = policies.filter(policy => {
     const matchesSearch = 
       policy.policyNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       policy.policyHolder.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,120 +284,117 @@ export const Policies: React.FC = () => {
             <select
               className="px-3 py-2 rounded-md border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as PolicyStatus | 'all')}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Live' | 'Expired')}
             >
               <option value="all">All Status</option>
-              <option value={PolicyStatus.ACTIVE}>Active</option>
-              <option value={PolicyStatus.EXPIRED}>Expired</option>
-              <option value={PolicyStatus.PENDING}>Pending</option>
-              <option value={PolicyStatus.CANCELLED}>Cancelled</option>
+              <option value="Live">Live</option>
+              <option value="Expired">Expired</option>
             </select>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Policy Details</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle/Property</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Policy Holder</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Coverage</th>
-                    <th className="px-4 py-3 text-right font-medium text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPolicies.length > 0 ? (
-                    filteredPolicies.map((policy) => {
-                      const user = mockUsers.find(user => 
-                        user.insurances.some(insurance => 
-                          insurance.policies.some(p => p.id === policy.id)
-                        )
-                      );
-                      
-                      const insurance = user?.insurances.find(insurance => 
-                        insurance.policies.some(p => p.id === policy.id)
-                      );
-                      
-                      const isExpiring = isExpiringSoon(policy.coverEnd);
-                      
-                      return (
-                        <tr key={policy.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-4">
-                            <div className="flex items-center">
-                              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                                <FileText className="h-5 w-5 text-primary" />
-                              </div>
-                              <div className="ml-3">
-                                <p className="font-medium">{policy.policyNumber || 'No Policy Number'}</p>
-                                <p className="text-gray-500">{insurance?.insurerName}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <p>{policy.vehicle || '-'}</p>
-                            <p className="text-gray-500 text-xs">
-                              {policy.registration ? `Reg: ${policy.registration}` : '-'}
-                            </p>
-                          </td>
-                          <td className="px-4 py-4">
-                            <p>{policy.policyHolder}</p>
-                            {policy.additionalDriver && (
-                              <p className="text-gray-500 text-xs">
-                                Additional: {policy.additionalDriver}
-                              </p>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              isExpiring && policy.status === PolicyStatus.ACTIVE
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : getStatusColor(policy.status)
-                            }`}>
-                              {isExpiring && policy.status === PolicyStatus.ACTIVE
-                                ? 'Expiring Soon'
-                                : policy.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <p className="text-sm">{formatDate(policy.coverStart)}</p>
-                            <p className="text-sm">to {formatDate(policy.coverEnd)}</p>
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <div className="flex justify-end">
-                              <Link
-                                to={`/policies/${policy.id}`}
-                                className="px-3 py-1 text-sm font-medium text-primary hover:text-primary/80"
-                              >
-                                View
-                              </Link>
-                              <div className="relative inline-block">
-                                <button className="rounded-full p-1 hover:bg-gray-100">
-                                  <MoreVertical className="h-4 w-4 text-gray-500" />
-                                </button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                        No policies found. Try adjusting your search or filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Policy Details</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle/Property</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Policy Holder</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Coverage</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-500">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPolicies.length > 0 ? (
+                      filteredPolicies.map((policy) => {
+                        const userName = typeof policy.user === 'string' 
+                          ? 'User' 
+                          : `${policy.user.name} ${policy.user.surname}`;
+                        
+                        const isExpiring = policy.coverEnd 
+                          ? isExpiringSoon(new Date(policy.coverEnd)) 
+                          : false;
+                        
+                        return (
+                          <tr key={policy._id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-4">
+                              <div className="flex items-center">
+                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <FileText className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="ml-3">
+                                  <p className="font-medium">{policy.policyNumber || 'No Policy Number'}</p>
+                                  <p className="text-gray-500">{policy.insurerName}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <p>{policy.vehicle || '-'}</p>
+                              <p className="text-gray-500 text-xs">
+                                {policy.registration ? `Reg: ${policy.registration}` : '-'}
+                              </p>
+                            </td>
+                            <td className="px-4 py-4">
+                              <p>{policy.policyHolder}</p>
+                              {policy.additionalDriver && policy.additionalDriver !== 'None' && (
+                                <p className="text-gray-500 text-xs">
+                                  Additional: {policy.additionalDriver}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                isExpiring && policy.status === 'Live'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : policy.status === 'Live' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                              }`}>
+                                {isExpiring && policy.status === 'Live'
+                                  ? 'Expiring Soon'
+                                  : policy.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <p className="text-sm">{formatDate(new Date(policy.coverStart))}</p>
+                              <p className="text-sm">to {formatDate(new Date(policy.coverEnd))}</p>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex justify-end">
+                                <Link
+                                  to={`/policies/${policy._id}`}
+                                  className="px-3 py-1 text-sm font-medium text-primary hover:text-primary/80"
+                                >
+                                  View
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          No policies found. Try adjusting your search or filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* This would be replaced with a proper modal component */}
+      {/* Create Policy Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
@@ -307,9 +417,9 @@ export const Policies: React.FC = () => {
                       required
                     >
                       <option value="">Select a user</option>
-                      {accessibleUsers.map(user => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.email})
+                      {users.map(user => (
+                        <option key={user._id} value={user._id}>
+                          {user.name} {user.surname} ({user.email})
                         </option>
                       ))}
                     </select>
@@ -318,41 +428,22 @@ export const Policies: React.FC = () => {
 
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium text-gray-900">Insurance Details</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Insurance Type
-                      </label>
-                      <select
-                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        value={formData.insuranceType}
-                        onChange={(e) => setFormData({ ...formData, insuranceType: e.target.value })}
-                        required
-                      >
-                        <option value="">Select type</option>
-                        <option value="Car">Car Insurance</option>
-                        <option value="Home">Home Insurance</option>
-                        <option value="Life">Life Insurance</option>
-                        <option value="Health">Health Insurance</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Insurer Name
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="Enter insurer name"
-                        value={formData.insurerName}
-                        onChange={(e) => setFormData({ ...formData, insurerName: e.target.value })}
-                        required
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Insurer Name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter insurer name"
+                      value={formData.insurerName}
+                      onChange={(e) => setFormData({ ...formData, insurerName: e.target.value })}
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Claims Line (Optional)
+                      Claims Line 
                     </label>
                     <input
                       type="tel"
@@ -376,36 +467,37 @@ export const Policies: React.FC = () => {
                       placeholder="Enter policy number"
                       value={formData.policyNumber}
                       onChange={(e) => setFormData({ ...formData, policyNumber: e.target.value })}
+                      required
                     />
                   </div>
-                  {formData.insuranceType === 'Car' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vehicle
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                          placeholder="Enter vehicle details"
-                          value={formData.vehicle}
-                          onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Registration
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                          placeholder="Enter registration"
-                          value={formData.registration}
-                          onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
-                        />
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Vehicle
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter vehicle details"
+                        value={formData.vehicle}
+                        onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
+                        required
+                      />
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Registration
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter registration"
+                        value={formData.registration}
+                        onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Policy Holder
@@ -431,10 +523,6 @@ export const Policies: React.FC = () => {
                       onChange={(e) => setFormData({ ...formData, additionalDriver: e.target.value })}
                     />
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-gray-900">Coverage Period</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -457,7 +545,6 @@ export const Policies: React.FC = () => {
                         className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         value={formData.coverEnd}
                         onChange={(e) => setFormData({ ...formData, coverEnd: e.target.value })}
-                        min={formData.coverStart}
                         required
                       />
                     </div>

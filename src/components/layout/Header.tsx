@@ -1,38 +1,56 @@
-import React from 'react';
-import { Bell, Menu, Search, User as UserIcon } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Menu, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSidebar } from '../../contexts/SidebarContext';
 
 export const Header: React.FC = () => {
   const { currentAdmin, logout } = useAuth();
+  const { toggleSidebar } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    toggleSidebar();
+  };
 
   return (
     <header className="bg-white border-b border-border px-4 py-2 flex items-center justify-between shadow-sm">
       <div className="flex items-center">
-        <button className="lg:hidden mr-2 p-1 rounded-md">
+        <button 
+          ref={menuButtonRef}
+          className="lg:hidden mr-2 p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+          onClick={handleMenuClick}
+          aria-label="Toggle sidebar"
+          type="button"
+        >
           <Menu className="h-6 w-6 text-gray-500" />
         </button>
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="pl-10 pr-4 py-2 w-full rounded-md border border-input text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
       </div>
       
       <div className="flex items-center gap-4">
-        <button className="p-1 rounded-full hover:bg-gray-100">
-          <Bell className="h-5 w-5 text-gray-500" />
-        </button>
-        
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
+            type="button"
+            aria-expanded={isProfileOpen}
+            aria-haspopup="true"
           >
             <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
               {currentAdmin?.name.charAt(0)}
@@ -46,8 +64,7 @@ export const Header: React.FC = () => {
                 <p className="text-sm font-medium">{currentAdmin?.name}</p>
                 <p className="text-xs text-gray-500">{currentAdmin?.email}</p>
               </div>
-              <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
-              <a href="#settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+
               <button 
                 onClick={logout}
                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"

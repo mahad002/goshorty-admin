@@ -9,7 +9,12 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "browser": {
+    "lucide-react/dist/esm/icons/fingerprint.js": "lucide-react/dist/esm/icons/scan.js"
+  },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
+    "axios": "^1.9.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^2.30.0",
@@ -18,7 +23,6 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
     "sonner": "^1.4.3",
-    "@supabase/supabase-js": "^2.39.7",
     "tailwind-merge": "^2.2.1",
     "zustand": "^4.5.2"
   },

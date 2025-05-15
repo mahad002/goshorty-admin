@@ -2,15 +2,23 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Users } from './pages/Users';
-import { UserDetail } from './pages/UserDetail';
 import { Policies } from './pages/Policies';
 import { PolicyDetail } from './pages/PolicyDetail';
-import { Documents } from './pages/Documents';
+
 import { AdminManagement } from './pages/AdminManagement';
 import { Settings } from './pages/Settings';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { SuperAdminRoute } from './components/auth/SuperAdminRoute';
+import { AdminRoute } from './components/auth/AdminRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
+
+// Component to redirect based on role
+const RoleRedirect = () => {
+  const { isSuperAdmin } = useAuth();
+  return <Navigate to={isSuperAdmin ? "/admin-management" : "/"} replace />;
+};
 
 function App() {
   return (
@@ -18,14 +26,19 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route index element={<Dashboard />} />
-          <Route path="users" element={<Users />} />
-          <Route path="users/:id" element={<UserDetail />} />
-          <Route path="policies" element={<Policies />} />
-          <Route path="policies/:id" element={<PolicyDetail />} />
-          <Route path="documents" element={<Documents />} />
-          <Route path="admin-management" element={<AdminManagement />} />
-          <Route path="settings" element={<Settings />} />
+          {/* Regular Admin Routes */}
+          <Route index element={<AdminRoute><Dashboard /></AdminRoute>} />
+          <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+    
+          <Route path="policies" element={<AdminRoute><Policies /></AdminRoute>} />
+          <Route path="policies/:id" element={<AdminRoute><PolicyDetail /></AdminRoute>} />
+        
+          
+          {/* Super Admin Routes */}
+          <Route path="admin-management" element={<SuperAdminRoute><AdminManagement /></SuperAdminRoute>} />
+          
+          {/* Common Routes */}
+          <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
