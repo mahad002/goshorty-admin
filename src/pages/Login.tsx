@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -16,14 +16,14 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    if (!email || !password) {
-      toast.error('Please enter email and password');
+    if (!username || !password) {
+      toast.error('Please enter username and password');
       setIsLoading(false);
       return;
     }
     
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
       if (success) {
         toast.success('Login successful');
         navigate('/');
@@ -41,10 +41,10 @@ export const Login: React.FC = () => {
   // Predefined demo credentials
   const useDemoCredentials = (role: 'admin' | 'super_admin') => {
     if (role === 'admin') {
-      setEmail('john@example.com');
+      setUsername('johnadmin');
       setPassword('password');
     } else {
-      setEmail('alex@example.com');
+      setUsername('alexsuper');
       setPassword('password');
     }
   };
@@ -67,19 +67,19 @@ export const Login: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
+              <label htmlFor="username" className="sr-only">
+                Username
               </label>
               <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div>

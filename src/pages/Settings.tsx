@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getToken } from '../services/service';
 import { changePassword } from '../services/superadminservice';
 import { toast } from 'sonner';
+import { validateUsername } from '../lib/utils';
 
 export const Settings: React.FC = () => {
   const { currentAdmin, updateCurrentAdmin } = useAuth();
@@ -13,7 +14,6 @@ export const Settings: React.FC = () => {
   // Profile form state
   const [profileData, setProfileData] = useState({
     username: currentAdmin?.name || '',
-    email: currentAdmin?.email || '',
   });
   
   // Password form state
@@ -30,13 +30,10 @@ export const Settings: React.FC = () => {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!profileData.username.trim()) {
-      toast.error('Username cannot be empty');
-      return;
-    }
-    
-    if (!profileData.email.trim()) {
-      toast.error('Email cannot be empty');
+    // Validate username
+    const usernameValidation = validateUsername(profileData.username);
+    if (!usernameValidation.isValid) {
+      toast.error(usernameValidation.message);
       return;
     }
     
@@ -45,8 +42,7 @@ export const Settings: React.FC = () => {
     try {
       // Use the AuthContext function to update profile which also updates the state
       const success = await updateCurrentAdmin({
-        username: profileData.username,
-        email: profileData.email
+        username: profileData.username.trim(), // Send trimmed username to backend
       });
       
       if (!success) {
@@ -135,15 +131,6 @@ export const Settings: React.FC = () => {
                     className="mt-1 block w-full rounded-md border border-border px-3 py-2"
                     value={profileData.username}
                     onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    className="mt-1 block w-full rounded-md border border-border px-3 py-2"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                   />
                 </div>
                 <Button type="submit" isLoading={isUpdatingProfile}>

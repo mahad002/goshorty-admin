@@ -23,6 +23,10 @@ interface BackendPolicy {
   additionalDriver: string;
   insurerName: string;
   insurerClaimsLine: string;
+  totalPaid?: number;
+  insurancePremium?: number;
+  administrationFee?: number;
+  iptTax?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -52,15 +56,16 @@ export const Policies: React.FC = () => {
   const [users, setUsers] = useState<BackendUser[]>([]);
   const [formData, setFormData] = useState({
     userId: '',
-    insurerName: '',
-    insurerClaimsLine: '',
-    policyNumber: '',
     vehicle: '',
     registration: '',
     policyHolder: '',
     additionalDriver: '',
     coverStart: '',
     coverEnd: '',
+    totalPaid: '',
+    insurancePremium: '',
+    administrationFee: '',
+    iptTax: ''
   });
 
   // Fetch policies and users from backend
@@ -149,11 +154,6 @@ export const Policies: React.FC = () => {
       return;
     }
     
-    if (!formData.insurerName) {
-      toast.error('Please enter insurer name');
-      return;
-    }
-    
     if (!formData.policyHolder) {
       toast.error('Please enter policy holder name');
       return;
@@ -181,7 +181,6 @@ export const Policies: React.FC = () => {
         
         // Format data for backend
         const policyData = {
-          policyNumber: formData.policyNumber,
           user: formData.userId,
           vehicle: formData.vehicle,
           registration: formData.registration,
@@ -190,8 +189,10 @@ export const Policies: React.FC = () => {
           status: 'Live', // New policies start as live
           policyHolder: formData.policyHolder,
           additionalDriver: formData.additionalDriver || 'None',
-          insurerName: formData.insurerName,
-          insurerClaimsLine: formData.insurerClaimsLine || '0800 123 4567',
+          totalPaid: formData.totalPaid ? parseFloat(formData.totalPaid) : undefined,
+          insurancePremium: formData.insurancePremium ? parseFloat(formData.insurancePremium) : undefined,
+          administrationFee: formData.administrationFee ? parseFloat(formData.administrationFee) : undefined,
+          iptTax: formData.iptTax ? parseFloat(formData.iptTax) : undefined
         };
         
         await createPolicyApi(policyData, token);
@@ -199,15 +200,16 @@ export const Policies: React.FC = () => {
         // Reset form and close modal
         setFormData({
           userId: '',
-          insurerName: '',
-          insurerClaimsLine: '',
-          policyNumber: '',
           vehicle: '',
           registration: '',
           policyHolder: '',
           additionalDriver: '',
           coverStart: '',
           coverEnd: '',
+          totalPaid: '',
+          insurancePremium: '',
+          administrationFee: '',
+          iptTax: ''
         });
         
         setIsCreateModalOpen(false);
@@ -427,49 +429,7 @@ export const Policies: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-gray-900">Insurance Details</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Insurer Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter insurer name"
-                      value={formData.insurerName}
-                      onChange={(e) => setFormData({ ...formData, insurerName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Claims Line 
-                    </label>
-                    <input
-                      type="tel"
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter claims line number"
-                      value={formData.insurerClaimsLine}
-                      onChange={(e) => setFormData({ ...formData, insurerClaimsLine: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
                   <h4 className="text-sm font-medium text-gray-900">Policy Details</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Policy Number
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter policy number"
-                      value={formData.policyNumber}
-                      onChange={(e) => setFormData({ ...formData, policyNumber: e.target.value })}
-                      required
-                    />
-                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -546,6 +506,66 @@ export const Policies: React.FC = () => {
                         value={formData.coverEnd}
                         onChange={(e) => setFormData({ ...formData, coverEnd: e.target.value })}
                         required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-gray-900">Financial Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Total Paid (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter total amount paid"
+                        value={formData.totalPaid}
+                        onChange={(e) => setFormData({ ...formData, totalPaid: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Insurance Premium (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter insurance premium"
+                        value={formData.insurancePremium}
+                        onChange={(e) => setFormData({ ...formData, insurancePremium: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Administration Fee (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter admin fee"
+                        value={formData.administrationFee}
+                        onChange={(e) => setFormData({ ...formData, administrationFee: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        IPT Tax (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter IPT tax amount"
+                        value={formData.iptTax}
+                        onChange={(e) => setFormData({ ...formData, iptTax: e.target.value })}
                       />
                     </div>
                   </div>

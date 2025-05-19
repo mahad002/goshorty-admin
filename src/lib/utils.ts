@@ -85,3 +85,28 @@ export function isExpired(endDate: Date | string): boolean {
   const daysRemaining = calculateDaysRemaining(endDate);
   return daysRemaining <= 0;
 }
+
+export function validateUsername(username: string): { isValid: boolean; message: string } {
+  // Remove spaces at beginning and end
+  const trimmedUsername = username.trim();
+  
+  // Check if the username has spaces in the middle
+  if (trimmedUsername.includes(' ')) {
+    return { 
+      isValid: false, 
+      message: 'Username cannot contain spaces'
+    };
+  }
+  
+  // Check if the username is empty after trimming
+  if (trimmedUsername.length === 0) {
+    return {
+      isValid: false,
+      message: 'Username cannot be empty'
+    };
+  }
+  
+  // Additional checks could be added here (minimum length, allowed characters, etc.)
+  
+  return { isValid: true, message: '' };
+}

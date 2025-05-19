@@ -33,6 +33,10 @@ interface Policy {
   additionalDriver: string;
   insurerName: string;
   insurerClaimsLine: string;
+  totalPaid?: number;
+  insurancePremium?: number;
+  administrationFee?: number;
+  iptTax?: number;
 }
 
 export const PolicyDetail: React.FC = () => {
@@ -66,7 +70,11 @@ export const PolicyDetail: React.FC = () => {
     policyHolder: '',
     additionalDriver: '',
     insurerName: '',
-    insurerClaimsLine: ''
+    insurerClaimsLine: '',
+    totalPaid: undefined,
+    insurancePremium: undefined,
+    administrationFee: undefined,
+    iptTax: undefined
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -100,7 +108,11 @@ export const PolicyDetail: React.FC = () => {
             policyHolder: response.policy.policyHolder,
             additionalDriver: response.policy.additionalDriver,
             insurerName: response.policy.insurerName,
-            insurerClaimsLine: response.policy.insurerClaimsLine
+            insurerClaimsLine: response.policy.insurerClaimsLine,
+            totalPaid: response.policy.totalPaid,
+            insurancePremium: response.policy.insurancePremium,
+            administrationFee: response.policy.administrationFee,
+            iptTax: response.policy.iptTax
           });
         } else {
           // Mock implementation would go here
@@ -361,6 +373,30 @@ export const PolicyDetail: React.FC = () => {
                     <p className="text-sm text-gray-500">Claims Line</p>
                     <p className="font-medium">{policy.insurerClaimsLine}</p>
                   </div>
+                  {policy.totalPaid && (
+                    <div>
+                      <p className="text-sm text-gray-500">Total Paid</p>
+                      <p className="font-medium">£{policy.totalPaid.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {policy.insurancePremium && (
+                    <div>
+                      <p className="text-sm text-gray-500">Insurance Premium</p>
+                      <p className="font-medium">£{policy.insurancePremium.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {policy.administrationFee && (
+                    <div>
+                      <p className="text-sm text-gray-500">Administration Fee</p>
+                      <p className="font-medium">£{policy.administrationFee.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {policy.iptTax && (
+                    <div>
+                      <p className="text-sm text-gray-500">IPT Tax</p>
+                      <p className="font-medium">£{policy.iptTax.toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -682,6 +718,64 @@ export const PolicyDetail: React.FC = () => {
                         value={editData.coverEnd}
                         onChange={(e) => setEditData({ ...editData, coverEnd: e.target.value })}
                         required
+                      />
+                    </div>
+                  </div>
+                  
+                  <h4 className="text-sm font-medium text-gray-900 pt-4">Financial Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Total Paid (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter total amount paid"
+                        value={editData.totalPaid || ''}
+                        onChange={(e) => setEditData({ ...editData, totalPaid: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Insurance Premium (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter insurance premium"
+                        value={editData.insurancePremium || ''}
+                        onChange={(e) => setEditData({ ...editData, insurancePremium: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Administration Fee (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter admin fee"
+                        value={editData.administrationFee || ''}
+                        onChange={(e) => setEditData({ ...editData, administrationFee: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        IPT Tax (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter IPT tax amount"
+                        value={editData.iptTax || ''}
+                        onChange={(e) => setEditData({ ...editData, iptTax: e.target.value ? parseFloat(e.target.value) : undefined })}
                       />
                     </div>
                   </div>

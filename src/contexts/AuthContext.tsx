@@ -9,7 +9,7 @@ import { createPolicy as createPolicyApi } from '../services/adminService';
 interface AuthContextType {
   currentAdmin: Admin | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   createAdmin: (adminData: Omit<Admin, 'id' | 'createdAt' | 'assignedUsers'> & { password: string }) => Promise<boolean>;
   updateAdmin: (id: string, adminData: Partial<Omit<Admin, 'id' | 'createdAt' | 'assignedUsers'>> & { password?: string }) => Promise<boolean>;
@@ -19,7 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   createPolicy: (policyData: any) => Promise<boolean>;
-  updateCurrentAdmin: (profileData: { username: string; email: string }) => Promise<boolean>;
+  updateCurrentAdmin: (profileData: { username: string }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,7 +29,6 @@ export const DEMO_ADMINS = [
   {
     id: '1',
     name: 'Super Admin',
-    email: 'superadmin@email.com',
     role: UserRole.SUPER_ADMIN,
     status: UserStatus.ACTIVE,
     createdAt: new Date('2024-01-01'),
@@ -38,7 +37,6 @@ export const DEMO_ADMINS = [
   {
     id: '2',
     name: 'Admin',
-    email: 'admin@email.com',
     role: UserRole.ADMIN,
     status: UserStatus.ACTIVE,
     createdAt: new Date('2024-01-01'),
@@ -61,18 +59,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       // Use the API for login rather than mock data
       if (ALWAYS_USE_BACKEND) {
-        const response = await loginSuperAdmin(email, password);
+        const response = await loginSuperAdmin(username, password);
         
         if (response && response.token) {
           const adminData: Admin = {
             id: response._id,
             name: response.username,
-            email: response.email,
             role: response.role === 'superadmin' ? UserRole.SUPER_ADMIN : UserRole.ADMIN,
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
@@ -91,10 +88,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check hardcoded credentials
         if (
-          (email === 'superadmin@email.com' && password === 'superadmin') ||
-          (email === 'admin@email.com' && password === 'admin')
+          (username === 'superadmin' && password === 'superadmin') ||
+          (username === 'admin' && password === 'admin')
         ) {
-          const admin = DEMO_ADMINS.find(a => a.email === email);
+          const admin = DEMO_ADMINS.find(a => a.name.toLowerCase() === username.toLowerCase());
           if (admin) {
             setCurrentAdmin(admin);
             localStorage.setItem('currentAdmin', JSON.stringify(admin));
@@ -126,7 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Transform frontend adminData to match backend API
         const backendAdminData = {
           username: adminData.name,
-          email: adminData.email,
           password: adminData.password,
           role: adminData.role === UserRole.SUPER_ADMIN ? 'superadmin' : 'admin',
           expirationDate: adminData.expiresAt,
@@ -163,7 +159,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const backendAdminData: Record<string, any> = {};
         
         if (adminData.name) backendAdminData.username = adminData.name;
-        if (adminData.email) backendAdminData.email = adminData.email;
         if (adminData.role) backendAdminData.role = adminData.role === UserRole.SUPER_ADMIN ? 'superadmin' : 'admin';
         if (adminData.expiresAt) backendAdminData.expirationDate = adminData.expiresAt;
         if (adminData.status) backendAdminData.status = adminData.status === UserStatus.ACTIVE ? 'active' : 'inactive';
@@ -346,7 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // New function to update current admin profile
-  const updateCurrentAdmin = async (profileData: { username: string; email: string }): Promise<boolean> => {
+  const updateCurrentAdmin = async (profileData: { username: string }): Promise<boolean> => {
     try {
       if (ALWAYS_USE_BACKEND) {
         const token = getToken();
@@ -357,7 +352,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const response = await updateProfile({
           username: profileData.username,
-          email: profileData.email
         }, token);
         
         // Update the admin in the local state and localStorage
@@ -365,7 +359,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedAdmin: Admin = {
             ...currentAdmin,
             name: profileData.username,
-            email: profileData.email
           };
           
           setCurrentAdmin(updatedAdmin);
@@ -382,7 +375,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedAdmin: Admin = {
             ...currentAdmin,
             name: profileData.username,
-            email: profileData.email
           };
           
           setCurrentAdmin(updatedAdmin);

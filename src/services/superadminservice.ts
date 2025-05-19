@@ -3,7 +3,6 @@ import { API_URL, authAxios, handleApiError } from './service';
 
 interface AdminData {
   username: string;
-  email: string;
   password: string;
   role: string;
   expirationDate?: Date;
@@ -19,7 +18,6 @@ interface PasswordChangeData {
 interface AdminResponse {
   _id: string;
   username: string;
-  email: string;
   role: string;
   expirationDate?: string;
   status?: string;
@@ -27,10 +25,10 @@ interface AdminResponse {
 }
 
 // Super admin login (shared with admin)
-const loginSuperAdmin = async (email: string, password: string): Promise<AdminResponse> => {
+const loginSuperAdmin = async (username: string, password: string): Promise<AdminResponse> => {
   try {
     const response = await axios.post(`${API_URL}/admin/auth/login`, {
-      email,
+      username,
       password
     });
     

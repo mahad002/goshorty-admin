@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, Search, FilterX, Shield, ShieldX, Clock, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { mockUsers } from '../data/mockData';
-import { formatDate, getStatusColor, isExpired, validateEmail } from '../lib/utils';
+import { formatDate, isExpired, validateUsername } from '../lib/utils';
 import { UserRole, UserStatus, Admin } from '../types';
 import { useAuth, DEMO_ADMINS } from '../contexts/AuthContext';
 import { toast } from 'sonner';
@@ -12,7 +11,6 @@ import { getAllAdmins, deleteAdmin as deleteAdminApi } from '../services/superad
 
 interface AdminFormData {
   name: string;
-  email: string;
   role: UserRole;
   expiresAt?: Date;
   password: string;
@@ -32,7 +30,7 @@ export const AdminManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<AdminFormData>({
     name: '',
-    email: '',
+
     role: UserRole.ADMIN,
     password: '',
     confirmPassword: '',
@@ -58,7 +56,7 @@ export const AdminManagement: React.FC = () => {
         const formattedAdmins: Admin[] = adminData.map(admin => ({
           id: admin._id,
           name: admin.username,
-          email: admin.email,
+     
           role: admin.role === 'superadmin' ? UserRole.SUPER_ADMIN : UserRole.ADMIN,
           status: admin.status === 'active' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
           createdAt: new Date(),
@@ -88,7 +86,7 @@ export const AdminManagement: React.FC = () => {
     setSelectedAdmin(admin);
     setFormData({
       name: admin.name,
-      email: admin.email,
+ 
       role: admin.role,
       expiresAt: admin.expiresAt,
       password: '',
@@ -102,16 +100,13 @@ export const AdminManagement: React.FC = () => {
     
     if (!selectedAdmin) return;
     
-    // Validate form data
-    if (!formData.name.trim()) {
-      toast.error('Please enter admin name');
+    // Validate username
+    const usernameValidation = validateUsername(formData.name);
+    if (!usernameValidation.isValid) {
+      toast.error(usernameValidation.message);
       return;
     }
-    
-    if (!formData.email.trim() || !validateEmail(formData.email)) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
+ 
     
     // Only validate password fields if a new password is being set
     if (formData.password) {
@@ -131,8 +126,7 @@ export const AdminManagement: React.FC = () => {
     try {
       // Only include password in the update if it was provided
       const adminData: Partial<Omit<Admin, 'id' | 'createdAt' | 'assignedUsers'>> & { password?: string } = {
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(), // Ensure trimmed value is sent to backend
         role: formData.role,
         expiresAt: formData.role === UserRole.ADMIN ? formData.expiresAt : undefined,
       };
@@ -148,7 +142,7 @@ export const AdminManagement: React.FC = () => {
         setSelectedAdmin(null);
         setFormData({
           name: '',
-          email: '',
+      
           role: UserRole.ADMIN,
           password: '',
           confirmPassword: '',
@@ -184,8 +178,7 @@ export const AdminManagement: React.FC = () => {
   // Filter admins based on search term and role
   const filteredAdmins = admins.filter(admin => {
     const matchesSearch = 
-      admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      admin.email.toLowerCase().includes(searchTerm.toLowerCase());
+      admin.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesRole = roleFilter === 'all' || admin.role === roleFilter;
     
@@ -195,16 +188,14 @@ export const AdminManagement: React.FC = () => {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data
-    if (!formData.name.trim()) {
-      toast.error('Please enter admin name');
+    // Validate username
+    const usernameValidation = validateUsername(formData.name);
+    if (!usernameValidation.isValid) {
+      toast.error(usernameValidation.message);
       return;
     }
     
-    if (!formData.email.trim() || !validateEmail(formData.email)) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
+   
     
     if (!formData.password) {
       toast.error('Please enter a password');
@@ -225,8 +216,7 @@ export const AdminManagement: React.FC = () => {
     
     try {
       const success = await createAdmin({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(), // Ensure trimmed value is sent to backend
         role: formData.role,
         status: UserStatus.ACTIVE,
         expiresAt: formData.role === UserRole.ADMIN ? formData.expiresAt : undefined,
@@ -237,7 +227,7 @@ export const AdminManagement: React.FC = () => {
         // Reset form and close modal
         setFormData({
           name: '',
-          email: '',
+      
           role: UserRole.ADMIN,
           password: '',
           confirmPassword: '',
@@ -376,7 +366,6 @@ export const AdminManagement: React.FC = () => {
                                 </div>
                                 <div className="ml-3">
                                   <p className="font-medium">{admin.name}</p>
-                                  <p className="text-gray-500">{admin.email}</p>
                                 </div>
                               </div>
                             </td>
@@ -456,30 +445,19 @@ export const AdminManagement: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name
+                      Username
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter admin name"
+                      placeholder="Enter admin username"
                     />
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter admin email"
-                    />
-                  </div>
-
+              
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Password
@@ -588,29 +566,18 @@ export const AdminManagement: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name
+                      Username
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter admin name"
+                      placeholder="Enter admin username"
                     />
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter admin email"
-                    />
-                  </div>
+           
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -727,7 +694,6 @@ export const AdminManagement: React.FC = () => {
                 </div>
                 <div className="ml-3">
                   <p className="font-medium">{adminToDelete.name}</p>
-                  <p className="text-gray-500">{adminToDelete.email}</p>
                 </div>
               </div>
             

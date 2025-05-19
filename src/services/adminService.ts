@@ -8,6 +8,11 @@ interface UserData {
   surname: string;
   dateOfBirth: string;
   postcode: string;
+  occupation: string;
+  phoneNumber: string;
+  homeAddress: string;
+  city: string;
+  licenseNumber: string;
 }
 
 interface UserResponse {
@@ -17,11 +22,16 @@ interface UserResponse {
   surname: string;
   dateOfBirth: string;
   postcode: string;
+  occupation: string;
+  phoneNumber: string;
+  homeAddress: string;
+  city: string;
+  licenseNumber: string;
 }
 
 // Policy interfaces
 interface PolicyData {
-  policyNumber: string;
+  policyNumber?: string;
   user: string;
   vehicle: string;
   registration: string;
@@ -30,8 +40,12 @@ interface PolicyData {
   status: string;
   policyHolder: string;
   additionalDriver?: string;
-  insurerName: string;
-  insurerClaimsLine: string;
+  insurerName?: string;
+  insurerClaimsLine?: string;
+  totalPaid?: number;
+  insurancePremium?: number;
+  administrationFee?: number;
+  iptTax?: number;
 }
 
 interface DocumentData {
@@ -65,6 +79,10 @@ interface PolicyResponse {
   additionalDriver: string;
   insurerName: string;
   insurerClaimsLine: string;
+  totalPaid?: number;
+  insurancePremium?: number;
+  administrationFee?: number;
+  iptTax?: number;
   createdAt?: string;
   updatedAt?: string;
 }

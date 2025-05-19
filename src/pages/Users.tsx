@@ -15,6 +15,11 @@ interface BackendUser {
   surname: string;
   dateOfBirth: string;
   postcode: string;
+  occupation: string;
+  phoneNumber: string;
+  homeAddress: string;
+  city: string;
+  licenseNumber: string;
   createdAt?: string;
 }
 
@@ -24,6 +29,11 @@ interface UserFormData {
   email: string;
   dateOfBirth: string;
   postcode: string;
+  occupation: string;
+  phoneNumber: string;
+  homeAddress: string;
+  city: string;
+  licenseNumber: string;
 }
 
 export const Users: React.FC = () => {
@@ -38,6 +48,11 @@ export const Users: React.FC = () => {
     email: '',
     dateOfBirth: '',
     postcode: '',
+    occupation: '',
+    phoneNumber: '',
+    homeAddress: '',
+    city: '',
+    licenseNumber: ''
   });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<BackendUser | null>(null);
@@ -73,6 +88,11 @@ export const Users: React.FC = () => {
         surname: user.name.split(' ')[1] || '',
         dateOfBirth: '1990-01-01',
         postcode: user.address?.split(',').pop()?.trim() || '',
+        occupation: '',
+        phoneNumber: '',
+        homeAddress: '',
+        city: '',
+        licenseNumber: '',
         createdAt: user.createdAt.toISOString()
       })));
     }
@@ -111,6 +131,31 @@ export const Users: React.FC = () => {
       toast.error('Please enter postcode');
       return;
     }
+    
+    if (!formData.occupation.trim()) {
+      toast.error('Please enter occupation');
+      return;
+    }
+    
+    if (!formData.phoneNumber.trim()) {
+      toast.error('Please enter phone number');
+      return;
+    }
+    
+    if (!formData.homeAddress.trim()) {
+      toast.error('Please enter home address');
+      return;
+    }
+    
+    if (!formData.city.trim()) {
+      toast.error('Please enter city');
+      return;
+    }
+    
+    if (!formData.licenseNumber.trim()) {
+      toast.error('Please enter license number');
+      return;
+    }
 
     setIsSubmitting(true);
     
@@ -131,6 +176,11 @@ export const Users: React.FC = () => {
           email: '',
           dateOfBirth: '',
           postcode: '',
+          occupation: '',
+          phoneNumber: '',
+          homeAddress: '',
+          city: '',
+          licenseNumber: ''
         });
         
         setIsCreateModalOpen(false);
@@ -205,6 +255,11 @@ export const Users: React.FC = () => {
       email: user.email,
       dateOfBirth: user.dateOfBirth,
       postcode: user.postcode,
+      occupation: user.occupation || '',
+      phoneNumber: user.phoneNumber || '',
+      homeAddress: user.homeAddress || '',
+      city: user.city || '',
+      licenseNumber: user.licenseNumber || ''
     });
     setIsEditModalOpen(true);
   };
@@ -238,6 +293,31 @@ export const Users: React.FC = () => {
       toast.error('Please enter postcode');
       return;
     }
+    
+    if (!formData.occupation.trim()) {
+      toast.error('Please enter occupation');
+      return;
+    }
+    
+    if (!formData.phoneNumber.trim()) {
+      toast.error('Please enter phone number');
+      return;
+    }
+    
+    if (!formData.homeAddress.trim()) {
+      toast.error('Please enter home address');
+      return;
+    }
+    
+    if (!formData.city.trim()) {
+      toast.error('Please enter city');
+      return;
+    }
+    
+    if (!formData.licenseNumber.trim()) {
+      toast.error('Please enter license number');
+      return;
+    }
 
     if (!editUser) return;
     
@@ -260,6 +340,11 @@ export const Users: React.FC = () => {
           email: '',
           dateOfBirth: '',
           postcode: '',
+          occupation: '',
+          phoneNumber: '',
+          homeAddress: '',
+          city: '',
+          licenseNumber: ''
         });
         
         setIsEditModalOpen(false);
@@ -344,8 +429,9 @@ export const Users: React.FC = () => {
                     <tr className="border-b bg-gray-50">
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Name</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Email</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Date of Birth</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Postcode</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Phone</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">City</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">License #</th>
                       <th className="px-4 py-3 text-right font-medium text-gray-500">Actions</th>
                     </tr>
                   </thead>
@@ -367,10 +453,13 @@ export const Users: React.FC = () => {
                             <p className="text-gray-500">{user.email}</p>
                           </td>
                           <td className="px-4 py-4">
-                            <p>{user.dateOfBirth}</p>
+                            <p>{user.phoneNumber}</p>
                           </td>
                           <td className="px-4 py-4">
-                            <p>{user.postcode}</p>
+                            <p>{user.city}</p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <p>{user.licenseNumber}</p>
                           </td>
                           <td className="px-4 py-4 text-right">
                             <div className="flex justify-end space-x-2">
@@ -393,7 +482,7 @@ export const Users: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                           No users found. Try adjusting your search or filters.
                         </td>
                       </tr>
@@ -419,12 +508,12 @@ export const Users: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name
+                       Name
                     </label>
                     <input
                       type="text"
                       className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Enter user's first name"
+                      placeholder="Enter user's  name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
@@ -474,6 +563,62 @@ export const Users: React.FC = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Occupation
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's occupation"
+                      value={formData.occupation}
+                      onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's phone number"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Home Address
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's home address"
+                      value={formData.homeAddress}
+                      onChange={(e) => setFormData({ ...formData, homeAddress: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Postcode
                     </label>
                     <input
@@ -482,6 +627,20 @@ export const Users: React.FC = () => {
                       placeholder="Enter postcode"
                       value={formData.postcode}
                       onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      License Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter license number"
+                      value={formData.licenseNumber}
+                      onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                       required
                     />
                   </div>
@@ -620,6 +779,62 @@ export const Users: React.FC = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Occupation
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's occupation"
+                      value={formData.occupation}
+                      onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's phone number"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Home Address
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's home address"
+                      value={formData.homeAddress}
+                      onChange={(e) => setFormData({ ...formData, homeAddress: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter user's city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Postcode
                     </label>
                     <input
@@ -628,6 +843,20 @@ export const Users: React.FC = () => {
                       placeholder="Enter postcode"
                       value={formData.postcode}
                       onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      License Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter license number"
+                      value={formData.licenseNumber}
+                      onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                       required
                     />
                   </div>
